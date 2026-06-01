@@ -109,6 +109,9 @@ if not st.session_state.answered:
 if st.session_state.answered:
     if choice == row['正しい意味']:
         st.success("⭕ 正解です！")
+
+        st.image("success.png", caption="🎉 正解！すばらしい！", width=300)
+            
         if 'last_counted' not in st.session_state or st.session_state.last_counted != st.session_state.index:
             st.session_state.correct_count += 1
             st.session_state.last_counted = st.session_state.index
