@@ -19,6 +19,9 @@ if "wrong_list" not in st.session_state:
 
 st.set_page_config(page_title="介護用語トレーニング", layout="centered")
 
+# 💡 【UI工夫①】アプリ全体のボタンやゲージを、介護らしい優しい「サクラ色」に変える設定
+st.markdown("<style>:root { --primary-color: #ffb6c1; }</style>", unsafe_allow_html=True)
+
 @st.cache_data
 def load_data():
     return pd.read_csv("data.csv")
@@ -87,7 +90,8 @@ st.write(f"進捗: {st.session_state.index + 1} / {len(df)} 問目")
 st.info(f"「**{row['用語']}**」はどういう意味ですか？")
 
 # ボタン部分：gTTSで音声を生成して再生
-if st.button("🔊 用語を読み上げる"):
+# 💡 【UI工夫③】音声ボタンの文字を、外国人スタッフに分かりやすい「やさしい日本語」に変更
+if st.button("📢 おとを きく (音声読み上げ)"):
     speak_text(row['用語'])
 
 if not st.session_state.answered and not st.session_state.current_options:
@@ -95,7 +99,8 @@ if not st.session_state.answered and not st.session_state.current_options:
     random.shuffle(options)
     st.session_state.current_options = options
 
-choice = st.radio("答えを選んでください：", st.session_state.current_options, index=None, key=f"q_{st.session_state.index}")
+# 💡 【UI工夫②】選択肢をスマホでも押しきりやすい「横並び（horizontal=True）」に変更
+choice = st.radio("答えを選んでください：", st.session_state.current_options, index=None, key=f"q_{st.session_state.index}", horizontal=True)
 
 if not st.session_state.answered:
     if st.button("回答する"):
