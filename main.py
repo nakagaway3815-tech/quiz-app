@@ -110,8 +110,10 @@ if st.session_state.answered:
     if choice == row['正しい意味']:
         st.success("⭕ 正解です！")
 
-        if '画像ファイル名' in row and pd.notna(row['画像ファイル名']) and row['画像ファイル名'] != "":
-            st.image(row['画像ファイル名'], width=400)
+        if '画像ファイル名' in row and pd.notna(row['画像ファイル名']):
+            img_name = str(row['画像ファイル名']).strip()  # 余計な空白を消す
+            if img_name != "" and img_name != "nan":
+                st.image(img_name, width=400)
             
         if 'last_counted' not in st.session_state or st.session_state.last_counted != st.session_state.index:
             st.session_state.correct_count += 1
