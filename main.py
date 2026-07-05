@@ -20,7 +20,7 @@ st.set_page_config(page_title="介護用語トレーニング", layout="centered
 # 【UI工夫①】サクラ色のテーマ
 st.markdown("<style>:root { --primary-color: #ffb6c1; }</style>", unsafe_allow_html=True)
 
-# 💡 レベル1のときは既存の「data.csv」を読み込むように改良
+# レベル別のCSVファイルを読み込む関数
 def load_data_by_level(level):
     if level == 1:
         filename = "data.csv"
@@ -79,13 +79,8 @@ if st.session_state.quiz_data is None:
                 st.session_state.max_questions = 30
                 
         if st.session_state.max_questions > 0:
-            # 💡 選ばれたレベルのCSVファイルを読み込む
             level_df = load_data_by_level(st.session_state.selected_level)
-            
-            # 念のため、データ数より多く選択された場合の安全対策
             num = min(st.session_state.max_questions, len(level_df))
-            
-            # ランダムに抽出
             st.session_state.quiz_data = level_df.sample(n=num).reset_index(drop=True)
             st.rerun()
         st.stop()
@@ -95,6 +90,20 @@ df = st.session_state.quiz_data
 if st.session_state.index >= len(df):
     st.balloons()
     st.header("🎉 終了！")
+    
+    # 💡 正解率の計算（例：10問中8問正解なら 0.8 = 80%）
+    score_rate = st.session_state.correct_count / len(df)
+    
+    # 💡 【新機能】正解率に応じてコメントとデザインを分ける
+    if score_rate == 1.0:
+        st.success("✨🏆 パーフェクト！ 🏆✨\n\nぜんぶ せいかいです！ すばらしい！ あなたは 介護の プロですね！")
+    elif score_rate >= 0.8:
+        st.success("👍 惜しい！ あとすこし！ 👍\n\nとても おしいです！ よく がんばりましたね！ つぎは まんてんを めざしましょう！")
+    elif score_rate >= 0.5:
+        st.warning("💪 もう少し頑張ろう！ 💪\n\n半分（はんぶん）以上 せいかいできました！ 復習（ふくしゅう）して また チャレンジしましょう！")
+    else:
+        st.error("🏁 つぎは もっと できる！ 🏁\n\nどんまいです！ はじめての 言葉（ことば）も 多（おお）かったですね。 いっしょに 勉強（べんきょう）していきましょう！")
+        
     st.subheader(f"正解数: {st.session_state.correct_count} / {len(df)}")
     
     st.write("---")
@@ -106,7 +115,6 @@ if st.session_state.index >= len(df):
         st.success("完璧です！")
 
     if st.button("メニューに戻る", use_container_width=True):
-        # すべてのデータをリセットして最初に戻る
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()
@@ -121,7 +129,6 @@ st.write(f"進捗: {st.session_state.index + 1} / {len(df)} 問目")
 
 st.info(f"「**{row['用語']}**」はどういう意味ですか？")
 
-# 【UI工夫③】音声ボタン
 if st.button("📢 おとを きく (音声読み上げ)"):
     speak_text(row['用語'])
 
@@ -130,7 +137,6 @@ if not st.session_state.answered and not st.session_state.current_options:
     random.shuffle(options)
     st.session_state.current_options = options
 
-# 【UI工夫②】横並びラジオボタン
 choice = st.radio("答えを選んでください：", st.session_state.current_options, index=None, key=f"q_{st.session_state.index}", horizontal=True)
 
 if not st.session_state.answered:
@@ -144,7 +150,6 @@ if not st.session_state.answered:
 # --- 6. 回答後の処理 ---
 if st.session_state.answered:
     if choice == row['正しい意味']:
-        # 【UI工夫④】優しいメッセージ
         st.success("⭕ 正解です！ すごいですね！ ✨")
 
         if '画像ファイル名' in row and pd.notna(row['画像ファイル名']):
@@ -156,7 +161,6 @@ if st.session_state.answered:
             st.session_state.correct_count += 1
             st.session_state.last_counted = st.session_state.index
     else:
-        # 【UI工夫④】優しいメッセージ
         st.error(f"❌ ざんねん！ つぎは がんばりましょう！\n\n正解は： **{row['正しい意味']}**")
         if row['用語'] not in st.session_state.wrong_list:
             st.session_state.wrong_list.append(row['用語'])
