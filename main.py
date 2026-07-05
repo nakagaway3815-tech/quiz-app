@@ -3,6 +3,7 @@ import pandas as pd
 import random
 from gtts import gTTS
 import io
+import os  # 💡 ファイルの存在チェックに必要です
 
 # --- 1. 音声読み上げ用の関数 ---
 def speak_text(text):
@@ -20,13 +21,41 @@ st.set_page_config(page_title="介護用語トレーニング", layout="centered
 # 【UI工夫①】サクラ色のテーマ
 st.markdown("<style>:root { --primary-color: #ffb6c1; }</style>", unsafe_allow_html=True)
 
-# レベル別のCSVファイルを読み込む関数
+# レベルに応じたCSVファイルを読み込む関数
 def load_data_by_level(level):
     if level == 1:
         filename = "data.csv"
     else:
         filename = f"data_level{level}.csv"
     return pd.read_csv(filename)
+
+# 💡 【新機能】すべてのCSVと画像ファイルが一致しているか自動テストする関数
+def run_data_check():
+    st.subheader("🔍 データ自動チェック結果")
+    error_found = False
+    
+    # レベル1から3まで順番に調べる
+    for lvl in [1, 2, 3]:
+        try:
+            df = load_data_by_level(lvl)
+            st.write(f"📁 **レベル {lvl} の確認中...** (全 {len(df)} 語)")
+            
+            for idx, row in df.iterrows():
+                if '画像ファイル名' in row and pd.notna(row['画像ファイル名']):
+                    img_name = str(row['画像ファイル名']).strip()
+                    
+                    # 空欄や "no.png" 以外の画像名が書かれている場合だけチェック
+                    if img_name != "" and img_name != "nan" and img_name != "no.png":
+                        # GitHub上（ローカルフォルダ内）にそのファイルがあるか確認
+                        if not os.path.exists(img_name):
+                            st.error(f"❌ レベル{lvl}の「{row['用語']}」: `{img_name}` という画像ファイルが見つかりません！")
+                            error_found = True
+        except Exception as e:
+            st.error(f"❌ レベル {lvl} のCSVファイル自体が開けません: {e}")
+            error_found = True
+            
+    if not error_found:
+        st.success("✅ パーフェクト！ すべての画像ファイルが正しく存在しています。バグはありません！")
 
 # セッション状態（データ保持）の初期化
 if 'quiz_data' not in st.session_state:
@@ -44,6 +73,13 @@ if st.session_state.quiz_data is None:
     
     # ステップA：まだレベルが選ばれていない場合
     if st.session_state.selected_level is None:
+        
+        # 💡 【新機能】画面の右上にテスト実行用の拡張エリアを作る
+        with st.expander("⚙️ データチェック（管理者用）"):
+            if st.button("テストを実行する"):
+                run_data_check()
+        
+        st.write("---")
         st.subheader("レベルを えらんでください（難易度選択）")
         
         col1, col2, col3 = st.columns(3)
@@ -89,22 +125,17 @@ if st.session_state.quiz_data is None:
 df = st.session_state.quiz_data
 if st.session_state.index >= len(df):
     st.balloons()
-    st.header("🎉 終了！")
+    st.header("🎉 終了！おつかれさまでした！")
+    st.subheader(f"正解数: {st.session_state.correct_count} / {len(df)}")
     
-    # 💡 正解率の計算（例：10問中8問正解なら 0.8 = 80%）
     score_rate = st.session_state.correct_count / len(df)
     
-    # 💡 【新機能】正解率に応じてコメントとデザインを分ける
     if score_rate == 1.0:
-        st.success("✨🏆 パーフェクト！ 🏆✨\n\nぜんぶ せいかいです！ すばらしい！ あなたは 介護の プロですね！")
+        st.success("🥇 **パーフェクト！ 満点（まんてん）です！**\n\n素晴らしいです！ あなたは介護用語の天才（てんさい）ですね！✨")
     elif score_rate >= 0.8:
-        st.success("👍 惜しい！ あとすこし！ 👍\n\nとても おしいです！ よく がんばりましたね！ つぎは まんてんを めざしましょう！")
-    elif score_rate >= 0.5:
-        st.warning("💪 もう少し頑張ろう！ 💪\n\n半分（はんぶん）以上 せいかいできました！ 復習（ふくしゅう）して また チャレンジしましょう！")
+        st.info("🥈 **おしい！ あとすこしです！**\n\nとても良い成績（せいせき）です！ 次は満点を目指しましょう！👍")
     else:
-        st.error("🏁 つぎは もっと できる！ 🏁\n\nどんまいです！ はじめての 言葉（ことば）も 多（おお）かったですね。 いっしょに 勉強（べんきょう）していきましょう！")
-        
-    st.subheader(f"正解数: {st.session_state.correct_count} / {len(df)}")
+        st.warning("🥉 **もうすこし 頑張り（がんばり）ましょう！**\n\n間違えた言葉を復習（ふくしゅう）して、もう一度チャレンジしてみてくださいね。😊")
     
     st.write("---")
     st.subheader("🚩 苦手克服リスト")
@@ -112,7 +143,7 @@ if st.session_state.index >= len(df):
         for q in st.session_state.wrong_list:
             st.write(f"・ **{q}**")
     else:
-        st.success("完璧です！")
+        st.success("完璧です！ 間違えた言葉はありません！")
 
     if st.button("メニューに戻る", use_container_width=True):
         for key in list(st.session_state.keys()):
@@ -154,7 +185,8 @@ if st.session_state.answered:
 
         if '画像ファイル名' in row and pd.notna(row['画像ファイル名']):
             img_name = str(row['画像ファイル名']).strip()
-            if img_name != "" and img_name != "nan":
+            # 💡 ここも no.png を弾くように安全対策をしてあります
+            if img_name != "" and img_name != "nan" and img_name != "no.png":
                 st.image(img_name, width=400)
             
         if 'last_counted' not in st.session_state or st.session_state.last_counted != st.session_state.index:
